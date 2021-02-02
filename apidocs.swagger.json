@@ -1,0 +1,41 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "proto/test-service.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "PantoCustomerService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/messages": {
+      "post": {
+        "operationId": "PantoCustomerService_PanById",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/goMicroProject2PanResponse"
+            }
+          }
+        },
+        "tags": [
+          "PantoCustomerService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "goMicroProject2PanResponse": {
+      "type": "object"
+    }
+  }
+}
