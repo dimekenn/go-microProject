@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	codec2 "github.com/unistack-org/micro-codec-xml/v3"
 	"github.com/unistack-org/micro/model"
 	"net/http"
 )
@@ -22,39 +21,6 @@ var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 	var (
 		request model.Request
 	)
-
-	msg := model.UFXmsg{
-		Direction: "asd",
-		MsgType:   "asd",
-		Version:   "123",
-		Xsi:       "file://c:/asd/asd/sdf.xsd",
-		Xmlns:     "http://google.com/asd/",
-		MsgId:     "fgdfg",
-	}
-	msg.Source = model.Source{
-		App: "way4",
-	}
-	information := model.Information{
-		Institution: "asd",
-		ObjectType:  "qwe",
-		ActionType:  "asd",
-	}
-	clientIDT := model.ClientIDT{
-		RefContractNumber: "asdasd",
-	}
-	objFor := model.ObjectFor{}
-	objFor.ClientIDT = clientIDT
-	information.ObjectFor = objFor
-	msgData := model.MsgData{}
-	msgData.Information = information
-	msg.MsgData = msgData
-
-	c := codec2.NewCodec()
-
-	err3 := c.Write(res, nil, msg)
-	if err3 != nil {
-		panic(err3)
-	}
 
 	err := json.NewDecoder(req.Body).Decode(&request)
 	if err != nil {
@@ -86,18 +52,6 @@ func EncodePan2(request model.Request) ([]string, error) {
 	}
 	return ibans, nil
 }
-
-//func EncodePan(pan []string) ([]string, error) {
-//	var ibans []string
-//	for i := range pan{
-//		iban, err := base64.StdEncoding.DecodeString(pan[i])
-//		if err != nil{
-//			return ibans, err
-//		}
-//		ibans = append(ibans, string(iban))
-//	}
-//	return ibans, nil
-//}
 
 func ExampleNewCBCDecrypter(keyy string, s string) string {
 	// Load your secret key from a safe place and reuse it across multiple
