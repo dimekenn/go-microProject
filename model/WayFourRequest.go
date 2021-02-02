@@ -9,7 +9,7 @@ type UFXmsg struct {
 	Version   string   `xml:"version,attr"`
 	Xsi       string   `xml:"xsi NoNameSpaceSchemaLocation,attr"`
 	Xmlns     string   `xml:"xmlns xsi,attr"`
-	MsgId     string   `xml:"MsgId"`
+	MsgId     int      `xml:"MsgId"`
 	Source    Source   `xml:"Source"`
 	MsgData   MsgData  `xml:"MsgData"`
 }
@@ -19,24 +19,25 @@ type Source struct {
 }
 
 type MsgData struct {
-	Text        string      `xml:",chardata"`
-	Information Information `xml:"Information"`
+	Text string `xml:",chardata"`
+	//Information Information `xml:"Information"`
+	RefContractNumber []string `xml:"RefContractNumber"`
 }
 
-type Information struct {
-	Text        string    `xml:",chardata"`
-	Institution string    `xml:"Institution"`
-	ObjectType  string    `xml:"ObjectType"`
-	ActionType  string    `xml:"ActionType"`
-	ObjectFor   ObjectFor `xml:"ObjectFor"`
-}
-
-type ObjectFor struct {
-	Text      string    `xml:",chardata"`
-	ClientIDT ClientIDT `xml:"ClientIdt"`
-}
-
-type ClientIDT struct {
-	Text              string `xml:",chardata"`
-	RefContractNumber string `xml:"RefContractNumber"`
-}
+//type Information struct {
+//	Text        string    `xml:",chardata"`
+//	Institution string    `xml:"Institution"`
+//	ObjectType  string    `xml:"ObjectType"`
+//	ActionType  string    `xml:"ActionType"`
+//	ObjectFor   ObjectFor `xml:"ObjectFor"`
+//}
+//
+//type ObjectFor struct {
+//	Text      string    `xml:",chardata"`
+//	ClientIDT ClientIDT `xml:"ClientIdt"`
+//}
+//
+//type ClientIDT struct {
+//	Text              string `xml:",chardata"`
+//	RefContractNumber string `xml:"RefContractNumber"`
+//}

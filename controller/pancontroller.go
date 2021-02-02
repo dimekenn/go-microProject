@@ -1,12 +1,15 @@
 package controller
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"github.com/unistack-org/micro/model"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -19,15 +22,17 @@ var keys = []string{
 
 var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 	var (
-		request model.Request
+		requestModel    model.Request
+		wayFourResponse model.UFXmsgResponse
 	)
 
-	err := json.NewDecoder(req.Body).Decode(&request)
+	//Visa Request...
+	err := json.NewDecoder(req.Body).Decode(&requestModel)
 	if err != nil {
 		panic(err)
 		return
 	}
-	ibans, err := EncodePan2(request)
+	ibans, err := EncodePan2(requestModel)
 	if err != nil {
 		panic(err)
 		return
@@ -36,6 +41,43 @@ var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 	if err2 != nil {
 		panic(err2)
 	}
+
+	//xml...
+	msg := model.UFXmsg{
+		Direction: "Rq",
+		MsgType:   "Information",
+		Version:   "2.3.80",
+		Xmlns:     "http://www.w3.org/2001/XMLSchema-instance",
+		MsgId:     1,
+	}
+	msgData := model.MsgData{}
+	msg.Source = model.Source{App: "W4P"}
+	msg.MsgData = msgData
+	msg.MsgData.RefContractNumber = ibans
+
+	//Way4 request
+	url := "https://httpbin.org/post"
+	xmlValue, err := xml.Marshal(msg)
+	if err != nil {
+		fmt.Println("error with xml marshal")
+	}
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(xmlValue))
+	if err != nil {
+		fmt.Println("bad request")
+	}
+	request.Header.Set("Content-Type", "application/xml")
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		fmt.Printf("Error with client do: s%", err)
+	}
+
+	data, _ := ioutil.ReadAll(response.Body)
+	err = xml.Unmarshal(data, &wayFourResponse)
+	if err != nil {
+		fmt.Printf("error to get parse xml: %s", err)
+	}
+
 }
 
 func Response(res http.ResponseWriter, response interface{}) error {
@@ -47,36 +89,39 @@ func Response(res http.ResponseWriter, response interface{}) error {
 func EncodePan2(request model.Request) ([]string, error) {
 	var ibans []string
 	for i := range request.Pan {
-		iban := ExampleNewCBCDecrypter(keys[request.KeyId], request.Pan[i])
+		iban, err := ExampleNewCBCDecrypter(keys[request.KeyId], request.Pan[i])
+		if err != nil {
+			return ibans, err
+		}
 		ibans = append(ibans, iban)
 	}
 	return ibans, nil
 }
 
-func ExampleNewCBCDecrypter(keyy string, s string) string {
+func ExampleNewCBCDecrypter(key string, s string) (string, error) {
 	// Load your secret key from a safe place and reuse it across multiple
 	// NewCipher calls. (Obviously don't use this example key for anything
 	// real.) If you want to convert a passphrase to a key, use a suitable
 	// package like bcrypt or scrypt.
 
-	key, _ := hex.DecodeString(keyy)
+	decodeKey, _ := hex.DecodeString(key)
 	ciphertext, _ := hex.DecodeString(s)
-	block, err := aes.NewCipher(key)
+	block, err := aes.NewCipher(decodeKey)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	// The IV needs to be unique, but not secure. Therefore it's common to
 	// include it at the beginning of the ciphertext.
 	if len(ciphertext) < aes.BlockSize {
-		panic("ciphertext too short")
+		fmt.Println("ciphertext too short")
 	}
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
 
 	// CBC mode always works in whole blocks.
 	if len(ciphertext)%aes.BlockSize != 0 {
-		panic("ciphertext is not a multiple of the block size")
+		fmt.Println("ciphertext is not a multiple of the block size")
 	}
 
 	mode := cipher.NewCBCDecrypter(block, iv)
@@ -95,5 +140,5 @@ func ExampleNewCBCDecrypter(keyy string, s string) string {
 	substring := ciphertext[12:]
 	fmt.Printf("%s\n", substring)
 
-	return string(ciphertext)
+	return string(ciphertext), nil
 }
