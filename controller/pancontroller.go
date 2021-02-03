@@ -8,9 +8,11 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/joho/godotenv"
 	"github.com/unistack-org/micro/model"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
 
 var keys = []string{
@@ -26,28 +28,40 @@ var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 		wayFourResponse model.UFXmsgResponse
 	)
 
-	//Visa Request...
-	err := json.NewDecoder(req.Body).Decode(&requestModel)
+	err := godotenv.Load()
 	if err != nil {
-		panic(err)
+		fmt.Printf("configuration env error: %s", err)
+		return
+	}
+
+	conf := model.Conf{
+		Url:          os.Getenv("url"),
+		Xmlns:        os.Getenv("xmlns"),
+		XmlDirection: os.Getenv("xmlDirection"),
+		XmlMsgType:   os.Getenv("xmlMsgType"),
+		XmlVersion:   os.Getenv("xmlVersion"),
+	}
+
+	//Visa Request...
+	err = json.NewDecoder(req.Body).Decode(&requestModel)
+	if err != nil {
+		fmt.Printf("error with decode json: %s", err)
 		return
 	}
 	ibans, err := EncodePan2(requestModel)
 	if err != nil {
-		panic(err)
+		fmt.Printf("error with encode pan: %s", err)
 		return
-	}
-	err2 := Response(res, ibans)
-	if err2 != nil {
-		panic(err2)
+	} else {
+		res.WriteHeader(http.StatusOK)
 	}
 
 	//xml...
 	msg := model.UFXmsg{
-		Direction: "Rq",
-		MsgType:   "Information",
-		Version:   "2.3.80",
-		Xmlns:     "http://www.w3.org/2001/XMLSchema-instance",
+		Direction: conf.XmlDirection,
+		MsgType:   conf.XmlMsgType,
+		Version:   conf.XmlVersion,
+		Xmlns:     conf.Xmlns,
 		MsgId:     1,
 	}
 	msgData := model.MsgData{}
@@ -56,20 +70,21 @@ var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 	msg.MsgData.RefContractNumber = ibans
 
 	//Way4 request
-	url := "https://httpbin.org/post"
 	xmlValue, err := xml.Marshal(msg)
 	if err != nil {
 		fmt.Println("error with xml marshal")
 	}
-	request, err := http.NewRequest("POST", url, bytes.NewBuffer(xmlValue))
+
+	request, err := http.NewRequest("POST", conf.Url, bytes.NewBuffer(xmlValue))
 	if err != nil {
 		fmt.Println("bad request")
 	}
+
 	request.Header.Set("Content-Type", "application/xml")
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		fmt.Printf("Error with client do: s%", err)
+		fmt.Printf("Error with client request: s%", err)
 	}
 
 	data, _ := ioutil.ReadAll(response.Body)
@@ -78,12 +93,6 @@ var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 		fmt.Printf("error to get parse xml: %s", err)
 	}
 
-}
-
-func Response(res http.ResponseWriter, response interface{}) error {
-	res.Header().Set("content-type", "application/json")
-	_ = json.NewEncoder(res).Encode(response)
-	return nil
 }
 
 func EncodePan2(request model.Request) ([]string, error) {
