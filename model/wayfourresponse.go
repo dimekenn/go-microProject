@@ -24,8 +24,8 @@ type Source2 struct {
 }
 
 type MsgData2 struct {
-	Text        string      `xml:",chardata"`
-	Information Information `xml:"Information"`
+	Text        string       `xml:",chardata"`
+	Information Information2 `xml:"Information"`
 }
 
 type Information2 struct {
