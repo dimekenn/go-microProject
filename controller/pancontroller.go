@@ -8,11 +8,10 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/joho/godotenv"
 	"github.com/unistack-org/micro/model"
+	"github.com/unistack-org/micro/serviceconfig"
 	"io/ioutil"
 	"net/http"
-	"os"
 )
 
 var keys = []string{
@@ -22,30 +21,26 @@ var keys = []string{
 	"645266556A586E3272357538782F413F4428472B4B6250655368566B59703373",
 }
 
-var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
+type PanController struct {
+	config *serviceconfig.Config
+}
+
+func NewPanController(config *serviceconfig.Config) *PanController {
+	return &PanController{
+		config: config,
+	}
+}
+
+func (p *PanController) PanToCustomer(res http.ResponseWriter, req *http.Request) {
 	var (
 		requestModel    model.Request
 		wayFourResponse model.UFXmsgResponse
 	)
 
-	err := godotenv.Load()
-	if err != nil {
-		fmt.Printf("configuration env error: %s", err)
-		return
-	}
-
-	conf := model.Conf{
-		Url:          os.Getenv("url"),
-		Xmlns:        os.Getenv("xmlns"),
-		XmlDirection: os.Getenv("xmlDirection"),
-		XmlMsgType:   os.Getenv("xmlMsgType"),
-		XmlVersion:   os.Getenv("xmlVersion"),
-	}
-
 	//Visa Request...
-	err = json.NewDecoder(req.Body).Decode(&requestModel)
+	err := json.NewDecoder(req.Body).Decode(&requestModel)
 	if err != nil {
-		fmt.Printf("error with decode json: %s", err)
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	ibans, err := EncodePan2(requestModel)
@@ -58,10 +53,10 @@ var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 
 	//xml...
 	msg := model.UFXmsg{
-		Direction: conf.XmlDirection,
-		MsgType:   conf.XmlMsgType,
-		Version:   conf.XmlVersion,
-		Xmlns:     conf.Xmlns,
+		Direction: p.config.XmlConfig.XmlDirection,
+		MsgType:   p.config.XmlConfig.XmlMsgType,
+		Version:   p.config.XmlConfig.XmlVersion,
+		Xmlns:     p.config.XmlConfig.Xmlns,
 		MsgId:     1,
 	}
 	msgData := model.MsgData{}
@@ -75,9 +70,9 @@ var PanToCustomer = func(res http.ResponseWriter, req *http.Request) {
 		fmt.Println("error with xml marshal")
 	}
 
-	request, err := http.NewRequest("POST", conf.Url, bytes.NewBuffer(xmlValue))
+	request, err := http.NewRequest("POST", p.config.XmlConfig.Url, bytes.NewBuffer(xmlValue))
 	if err != nil {
-		fmt.Println("bad request")
+		fmt.Println(err)
 	}
 
 	request.Header.Set("Content-Type", "application/xml")

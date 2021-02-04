@@ -20,7 +20,7 @@ import (
 )
 
 func StartHTTPService(ctx context.Context, errCh chan<- error) {
-	cfg := serviceconfig.NewConfig("pan-service", "1.0")
+	cfg := serviceconfig.NewConfig("test-service", "1.0")
 
 	if err := config.Load(ctx,
 		config.NewConfig(config.Struct(cfg)),
@@ -68,10 +68,11 @@ func StartHTTPService(ctx context.Context, errCh chan<- error) {
 	); err != nil {
 		errCh <- err
 	}
+	panController := controller.NewPanController(cfg)
 
 	router := mux.NewRouter()
 
-	router.HandleFunc("/visa", controller.PanToCustomer).Methods("POST")
+	router.HandleFunc("/visa", panController.PanToCustomer).Methods("POST")
 	http.Handle("/", router)
 	err = http.ListenAndServe(cfg.Server.Addr, nil)
 	if err != nil {

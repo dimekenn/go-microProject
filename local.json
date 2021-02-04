@@ -1,5 +1,12 @@
 {
     "server": {
         "addr": ":7070"
+    },
+    "xmlConfig": {
+        "url": "https://google.com",
+        "xmlns": "http://www.w3.org/2001/XMLSchema-instance",
+        "version": "2.3.80",
+        "direction": "Rq",
+        "msg_type": "Information"
     }
 }
